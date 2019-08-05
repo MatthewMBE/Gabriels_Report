@@ -1,0 +1,668 @@
+import pandas as pd
+import plotly_express as px
+import plotly.plotly as py
+import plotly.graph_objs as go
+import plotly.io
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+# Initialize notebook for offline mode so it doesnt call plotly API
+init_notebook_mode(connected = True)
+
+from pandas import *
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+# total projected costs data frames
+file_path = '//SEDCFW138002.US138.CORPINTRA.NET/D147/Public/_Departments/MBXTRA_General/Report_Automation/Gabriels_Report/'
+
+df_pt = pd.read_excel(file_path + "Import_Data.xlsx", sheet_name = "PTotal")
+df_pt['Indicator'] = 'Projected'
+df_ptFreight = df_pt.loc[df_pt['Type'] == 'Freight']
+df_ptCoM = df_pt.loc[df_pt['Type'] == 'CoM']
+
+#importing data frame for projected freight and material costs
+
+df_pc = pd.read_excel(file_path + "Import_Data.xlsx", sheet_name = "PCosts")
+df_pc['Indicator'] = 'Projected'
+
+# projected freight cost by supplier data frames
+
+df_pfc = df_pc.drop(columns ='TotalCoM')
+df_pfc = df_pfc.rename(columns={'TotalF': 'Total'})
+df_pf_CJ = df_pfc.loc[df_pfc['Supplier'] == 'CJ Automotive']
+df_pf_Continental = df_pfc.loc[df_pfc['Supplier'] == 'Continental']
+df_pf_G = df_pfc.loc[df_pfc['Supplier'] == 'Gentex']
+df_pf_H = df_pfc.loc[df_pfc['Supplier'] == 'Hutchinson']
+df_pf_J = df_pfc.loc[df_pfc['Supplier'] == 'Joyson']
+df_pf_M = df_pfc.loc[df_pfc['Supplier'] == 'Modine']
+df_TPF = df_pfc.groupby(['Month']).sum().reset_index()
+
+# adding totals to projected freight dfs
+
+def add_ptotal_F(df_projected_F, supplier):
+    df_total = df_projected_F['Total'].sum()
+    temp = pd.Series([supplier, 'Total', df_total, 'Projected'], index = ['Supplier', 'Month', 'Total', 'Indicator'])
+    df_ftemp = df_projected_F.append(temp, ignore_index=True)
+    return df_ftemp
+
+df_pf_CJ = add_ptotal_F(df_pf_CJ, 'CJ Automotive')
+
+df_pf_Continental = add_ptotal_F(df_pf_Continental, 'Continental')
+
+df_pf_G = add_ptotal_F(df_pf_G, 'Gentex')
+
+df_pf_H = add_ptotal_F(df_pf_H, 'Hutchinson')
+
+df_pf_J = add_ptotal_F(df_pf_J, 'Joyson')
+
+df_pf_M = add_ptotal_F(df_pf_M, 'Modine')
+
+PF_total = df_TPF['Total'].sum()
+pPTF = pd.Series(['Total', PF_total], index=['Month', 'Total'])
+df_TPF = df_TPF.append(pPTF, ignore_index=True)
+df_TPF['Indicator'] = 'Projected'
+
+# projected costs of material by supplier
+
+df_pCoM = df_pc.drop(columns = 'TotalF')
+df_pCoM = df_pCoM.rename(columns={'TotalCoM': 'Total'})
+df_pCoM_CJ = df_pCoM.loc[df_pCoM['Supplier'] == 'CJ Automotive']
+df_pCoM_Continental = df_pCoM.loc[df_pCoM['Supplier'] == 'Continental']
+df_pCoM_G = df_pCoM.loc[df_pCoM['Supplier'] == 'Gentex']
+df_pCoM_H = df_pCoM.loc[df_pCoM['Supplier'] == 'Hutchinson']
+df_pCoM_J = df_pCoM.loc[df_pCoM['Supplier'] == 'Joyson']
+df_pCoM_M = df_pCoM.loc[df_pCoM['Supplier'] == 'Modine']
+df_TPCoM = df_pCoM.groupby(['Month']).sum().reset_index()
+df_TPCoM['Indicator'] = 'Projected'
+
+# adding totals to projected CoM dfs
+
+def add_ptotal_CoM(df_projected_CoM, supplier):
+    df_total = df_projected_CoM['Total'].sum()
+    temp = pd.Series([supplier, 'Total', df_total, 'Projected'], index = ['Supplier', 'Month', 'Total', 'Indicator'])
+    df_ftemp = df_projected_CoM.append(temp, ignore_index=True)
+    return df_ftemp
+
+df_pCoM_CJ = add_ptotal_CoM(df_pCoM_CJ, 'CJ Automotive')
+
+df_pCoM_Continental = add_ptotal_CoM(df_pCoM_Continental, 'Continental')
+
+df_pCoM_G = add_ptotal_CoM(df_pCoM_G, 'Gentex')
+
+df_pCoM_H = add_ptotal_CoM(df_pCoM_H, 'Hutchinson')
+
+df_pCoM_J = add_ptotal_CoM(df_pCoM_J, 'Joyson')
+
+df_pCoM_M = add_ptotal_CoM(df_pCoM_M, 'Modine')
+
+
+PCoM_total = df_TPCoM['Total'].sum()
+pPTCoM = pd.Series(['Total', PCoM_total], index=['Month', 'Total'])
+df_TPCoM = df_TPCoM.append(pPTCoM, ignore_index=True)
+df_TPCoM['Indicator'] = 'Projected'
+
+# actual cost of material by supplier
+
+df_CoM = pd.read_excel(file_path + "Import_Data.xlsx", sheet_name = "ACoM")
+
+df_CoM.loc[df_CoM['Total'] <= 0, 'Total'] = 0
+df_CoM.sum()
+
+df_CoM['month'] = pd.DatetimeIndex(df_CoM['Date']).month
+df_CoM.loc[df_CoM['month'] == 1, 'Month'] = 'January'
+df_CoM.loc[df_CoM['month'] == 2, 'Month'] = 'February'
+df_CoM.loc[df_CoM['month'] == 3, 'Month'] = 'March'
+df_CoM.loc[df_CoM['month'] == 4, 'Month'] = 'April'
+df_CoM.loc[df_CoM['month'] == 5, 'Month'] = 'May'
+df_CoM.loc[df_CoM['month'] == 6, 'Month'] = 'June'
+df_CoM.loc[df_CoM['month'] == 7, 'Month'] = 'July'
+df_CoM.loc[df_CoM['month'] == 8, 'Month'] = 'August'
+df_CoM.loc[df_CoM['month'] == 9, 'Month'] = 'September'
+df_CoM.loc[df_CoM['month'] == 10, 'Month'] = 'October'
+df_CoM.loc[df_CoM['month'] == 11, 'Month'] = 'November'
+df_CoM.loc[df_CoM['month'] == 12, 'Month'] = 'December'
+df_CoM = df_CoM.drop(columns=['month', 'Date'])
+df_RCoM = df_CoM
+
+df_CoM = df_CoM.groupby(['Supplier', 'Month']).sum().reset_index()
+df_CoM['Indicator'] = 'Actual'
+df_CoM_CJ = df_CoM.loc[df_CoM['Supplier'] == 'CJ Automotive Indiana LLC']
+df_CoM_Continental = df_CoM.loc[df_CoM['Supplier'] == 'Continental Automotive']
+df_CoM_G = df_CoM.loc[df_CoM['Supplier'] == 'Gentex Corporation']
+df_CoM_H = df_CoM.loc[df_CoM['Supplier'] == 'Hutchinson Antivibration']
+df_CoM_J = df_CoM.loc[df_CoM['Supplier'] == 'Joyson Safety Systems']
+df_CoM_M = df_CoM.loc[df_CoM['Supplier'] == 'Modine Manufacturing Company']
+df_TACoM = df_CoM.groupby('Month').sum().reset_index()
+df_TACoM['Indicator'] = 'Actual'
+
+# raw CoM data per supplier
+df_RCoM_CJ = df_RCoM.loc[df_RCoM['Supplier'] == 'CJ Automotive'].reset_index()
+df_RCoM_Continental = df_RCoM.loc[df_RCoM['Supplier'] == 'Continental Automotive'].reset_index()
+df_RCoM_G = df_RCoM.loc[df_RCoM['Supplier'] == 'Gentex Corporation'].reset_index()
+df_RCoM_H = df_RCoM.loc[df_RCoM['Supplier'] =='Hutchinson Antivibration'].reset_index()
+df_RCoM_J = df_RCoM.loc[df_RCoM['Supplier'] == 'Joyson Safety Systems'].reset_index()
+df_RCoM_M = df_RCoM.loc[df_RCoM['Supplier'] == 'Modine'].reset_index()
+
+# adding totals to actual CoM dfs
+
+def add_atotal_CoM(df_actual_CoM, supplier):
+    df_total = df_actual_CoM['Total'].sum()
+    temp = pd.Series([supplier, 'Total', df_total, 'Actual'], index = ['Supplier', 'Month', 'Total', 'Indicator'])
+    df_ftemp = df_actual_CoM.append(temp, ignore_index=True)
+    return df_ftemp
+
+df_CoM_CJ = add_atotal_CoM(df_CoM_CJ, 'CJ Automotive')
+
+df_CoM_Continental = add_atotal_CoM(df_CoM_Continental, 'Continental Automotive')
+
+df_CoM_G = add_atotal_CoM(df_CoM_G, 'Gentex Corporation')
+
+df_CoM_H = add_atotal_CoM(df_CoM_H, 'Hutchinson Antivibrations')
+
+df_CoM_J = add_atotal_CoM(df_CoM_J, 'Joyson Safety Systems')
+
+df_CoM_M = add_atotal_CoM(df_CoM_M, 'Modine Manufacturing Company')
+
+ACoM_total = df_TACoM['Total'].sum()
+aATCoM = pd.Series(['Total', ACoM_total], index=['Month', 'Total'])
+df_TACoM = df_TACoM.append(aATCoM, ignore_index=True)
+df_TACoM['Indicator'] = 'Actual'
+
+# actual cost of freight 
+
+df_fc = pd.read_excel(file_path + "Import_Data.xlsx", sheet_name = 'AFreight')
+df_fc = df_fc.drop(columns=["Invoice Date", "Invoice Date CW", "Requested Pick up Date", "Pick up Date CW", "Expected v. Actual Pick-up Date (Delta)",
+                           "Location", "Expected Delivery date", "Actual Delivery Date", "Delivery Date CW", "Expected v. Actual Delivery Date (Delta)",
+                           "Delivery Location", "Carrier", "LTL/FTL", "BOL Number", "Invoice Number Penske", "Miles", "Mileage Band", "CW", "# of Pallets",
+                           "Weight in lbs", "Rate in US-D", "Rate Min.", "Actual Rate Charged Penske", "Fuel Surcharge", "Accessorial Surcharge", 
+                           "Expected Total in US-D", "Comment", "Logistics Approval", "Finance Approval"])
+
+df_fc['month'] = pd.DatetimeIndex(df_fc['Ship Date']).month
+df_fc.loc[df_fc['month'] == 1, 'Month'] = 'January'
+df_fc.loc[df_fc['month'] == 2, 'Month'] = 'February'
+df_fc.loc[df_fc['month'] == 3, 'Month'] = 'March'
+df_fc.loc[df_fc['month'] == 4, 'Month'] = 'April'
+df_fc.loc[df_fc['month'] == 5, 'Month'] = 'May'
+df_fc.loc[df_fc['month'] == 6, 'Month'] = 'June'
+df_fc.loc[df_fc['month'] == 7, 'Month'] = 'July'
+df_fc.loc[df_fc['month'] == 8, 'Month'] = 'August'
+df_fc.loc[df_fc['month'] == 9, 'Month'] = 'September'
+df_fc.loc[df_fc['month'] == 10, 'Month'] = 'October'
+df_fc.loc[df_fc['month'] == 11, 'Month'] = 'November'
+df_fc.loc[df_fc['month'] == 12, 'Month'] = 'December'
+df_fc = df_fc.drop(columns=['month'])
+df_RF = df_fc
+df_fc = df_fc.groupby(['Supplier', 'Month']).sum().reset_index()
+df_fc['Indicator'] = 'Actual'
+
+# actual cost of frieght by supplier
+
+df_fc_CJ = df_fc.loc[df_fc['Supplier'] == 'CJ Automotive']
+df_fc_Continental = df_fc.loc[df_fc['Supplier'] == 'Continental']
+df_fc_G = df_fc.loc[df_fc['Supplier'] == 'Gentex']
+df_fc_H = df_fc.loc[df_fc['Supplier'] == 'Hutchinson']
+df_fc_J = df_fc.loc[df_fc['Supplier'] == 'Joyson']
+df_fc_M = df_fc.loc[df_fc['Supplier'] == 'Modine']
+df_TAF = df_fc.groupby('Month').sum().reset_index()
+df_TAF['Indicator'] = 'Actual'
+
+# raw freight data per supplier
+
+df_RF_CJ = df_RF.loc[df_RF['Supplier'] == 'CJ Automotive'].reset_index()
+df_RF_Continental = df_RF.loc[df_RF['Supplier'] == 'Continental'].reset_index()
+df_RF_G = df_RF.loc[df_RF['Supplier'] == 'Gentex'].reset_index()
+df_RF_H = df_RF.loc[df_RF['Supplier'] =='Hutchinson'].reset_index()
+df_RF_J = df_RF.loc[df_RF['Supplier'] == 'Joyson'].reset_index()
+df_RF_M = df_RF.loc[df_RF['Supplier'] == 'Modine'].reset_index()
+
+# adding totals to actual freight dfs
+
+def add_atotal_F(df_actual_F, supplier):
+    df_total = df_actual_F['Total'].sum()
+    temp = pd.Series([supplier, 'Total', df_total, 'Actual'], index = ['Supplier', 'Month', 'Total', 'Indicator'])
+    df_ftemp = df_actual_F.append(temp, ignore_index=True)
+    return df_ftemp
+
+df_fc_CJ = add_atotal_F(df_fc_CJ, 'CJ Automotive')
+
+df_fc_Continental = add_atotal_F(df_fc_Continental, 'Continental')
+
+df_fc_G = add_atotal_F(df_fc_G, 'Gentex')
+
+df_fc_H = add_atotal_F(df_fc_H, 'Hutchinson')
+
+df_fc_J = add_atotal_F(df_fc_J, 'Joyson')
+
+df_fc_M = add_atotal_F(df_fc_M, 'Modine')
+
+PF_total = df_TAF['Total'].sum()
+aATF = pd.Series(['Total', PF_total], index=['Month', 'Total'])
+df_TAF = df_TAF.append(aATF, ignore_index=True)
+df_TAF['Indicator'] = 'Actual'
+
+# merging freight dfs
+
+field = "Month"
+month_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+               'November', 'December', 'Total']
+
+def merge_Fdfs(df_AF, df_PF, month_order):
+    df_FF = df_AF.append(df_PF).reset_index()
+    df_FF = df_FF.set_index('Month').loc[month_order].reset_index()
+    df_FF.fillna(0, inplace=True)
+    df_FF = df_FF.drop(columns=['index'])
+    return df_FF
+
+df_FCJ_freight = merge_Fdfs(df_fc_CJ, df_pf_CJ, month_order)
+df_FCJ_freight['Total'] = df_FCJ_freight['Total'].apply(lambda x: round(x, 0))
+
+df_FContinental_freight = merge_Fdfs(df_fc_Continental, df_pf_Continental, month_order)
+df_FContinental_freight['Total'] = df_FContinental_freight['Total'].apply(lambda x: round(x, 0))
+
+df_FGentex_freight = merge_Fdfs(df_fc_G, df_pf_G, month_order)
+df_FGentex_freight['Total'] = df_FGentex_freight['Total'].apply(lambda x: round(x, 0))
+
+df_FHutchinson_freight = merge_Fdfs(df_fc_H, df_pf_H, month_order)
+df_FHutchinson_freight['Total'] = df_FHutchinson_freight['Total'].apply(lambda x: round(x, 0))
+
+df_FJoyson_freight = merge_Fdfs(df_fc_J, df_pf_J, month_order)
+df_FJoyson_freight['Total'] = df_FJoyson_freight['Total'].apply(lambda x: round(x, 0))
+
+df_FModine_freight = merge_Fdfs(df_fc_M, df_pf_M, month_order)
+df_FModine_freight['Total'] = df_FModine_freight['Total'].apply(lambda x: round(x, 0))
+
+df_total_freight = merge_Fdfs(df_TAF, df_TPF, month_order)
+df_total_freight['Total'] = df_total_freight['Total'].apply(lambda x: round(x, 0))
+
+# merging CoM data frames
+
+def merge_CoMdfs(df_ACoM, df_PCoM, month_order):
+    df_FF = df_ACoM.append(df_PCoM).reset_index()
+    df_FF = df_FF.set_index('Month').loc[month_order].reset_index()
+    df_FF.fillna(0, inplace=True)
+    df_FF = df_FF.drop(columns=['index'])
+    return df_FF
+
+df_FCoM_CJ = merge_CoMdfs(df_CoM_CJ, df_pCoM_CJ, month_order)
+df_FCoM_CJ['Total'] = df_FCoM_CJ['Total'].apply(lambda x: round(x, 0))
+
+df_FCoM_Continental = merge_CoMdfs(df_CoM_Continental, df_pCoM_Continental, month_order)
+df_FCoM_Continental['Total'] = df_FCoM_Continental['Total'].apply(lambda x: round(x, 0))
+
+df_FCoM_Gentex = merge_CoMdfs(df_CoM_G, df_pCoM_G, month_order)
+df_FCoM_Gentex['Total'] = df_FCoM_Gentex['Total'].apply(lambda x: round(x, 0))
+
+df_FCoM_Hutchinson = merge_CoMdfs(df_CoM_H, df_pCoM_H, month_order)
+df_FCoM_Hutchinson['Total'] = df_FCoM_Hutchinson['Total'].apply(lambda x: round(x, 0))
+
+df_FCoM_Joyson = merge_CoMdfs(df_CoM_J, df_pCoM_J, month_order)
+df_FCoM_Joyson['Total'] = df_FCoM_Joyson['Total'].apply(lambda x: round(x, 0))
+
+df_FCoM_Modine = merge_CoMdfs(df_CoM_M, df_pCoM_M, month_order)
+df_FCoM_Modine['Total'] = df_FCoM_Modine['Total'].apply(lambda x: round(x, 0))
+
+df_Ftotal_CoM = merge_Fdfs(df_TACoM, df_TPCoM, month_order)
+df_Ftotal_CoM['Total'] = df_Ftotal_CoM['Total'].apply(lambda x: round(x, 0))
+
+
+# create dfs that show the relationship between Actual freight costs and costs of material
+
+def relation_actual(df_CoM, df_F, month_order):
+    df_CoM = df_CoM.drop(columns=['Supplier', 'Indicator'])
+    df_F = df_F.drop(columns=['Supplier', 'Indicator'])
+    df_relation = pd.merge(df_CoM, df_F, on=['Month'])
+    df_relation = df_relation.set_index('Month').loc[month_order].reset_index()
+    df_relation.fillna(0, inplace=True)
+    df_relation['Ratio'] = (df_relation.Total_y / df_relation.Total_x)*100
+    df_relation = df_relation.drop(columns= ['Total_x', 'Total_y'])
+    df_relation['Indicator'] = 'Actual'
+    df_relation.fillna(0, inplace=True)
+    return df_relation
+
+df_ACJ_relation = relation_actual(df_CoM_CJ, df_fc_CJ, month_order)
+
+df_AContinental_relation = relation_actual(df_CoM_Continental, df_fc_Continental,month_order)
+
+df_AG_relation = relation_actual(df_CoM_G, df_fc_G, month_order)
+
+df_AH_relation = relation_actual(df_CoM_H, df_fc_H, month_order)
+
+df_AJ_relation = relation_actual(df_CoM_J, df_fc_J, month_order)
+
+df_AM_relation = relation_actual(df_CoM_M, df_fc_M, month_order)
+
+df_TACoM = df_TACoM.drop(columns=['Indicator'])
+df_TAF = df_TAF.drop(columns=['Indicator'])
+df_ATotal_relation = pd.merge(df_TACoM, df_TAF, on=['Month'])
+df_ATotal_relation = df_ATotal_relation.set_index('Month').loc[month_order].reset_index()
+df_ATotal_relation.fillna(0, inplace=True)
+df_ATotal_relation['Ratio'] = (df_ATotal_relation.Total_y / df_ATotal_relation.Total_x)*100
+df_ATotal_relation = df_ATotal_relation.drop(columns=['Total_x', 'Total_y'])
+df_ATotal_relation['Indicator'] = 'Actual'
+df_ATotal_relation.fillna(0, inplace=True)
+
+# create dfs that show the relationship between Projected freight costs and costs of material
+
+def relation_projected(df_CoM, df_F, month_order):
+    df_CoM = df_CoM.drop(columns=['Supplier', 'Indicator'])
+    df_F = df_F.drop(columns=['Supplier', 'Indicator'])
+    df_relation = pd.merge(df_CoM, df_F, on=['Month'])
+    df_relation = df_relation.set_index('Month').loc[month_order].reset_index()
+    df_relation.fillna(0, inplace=True)
+    df_relation['Ratio'] = (df_relation.Total_y / df_relation.Total_x)*100
+    df_relation = df_relation.drop(columns= ['Total_x', 'Total_y'])
+    df_relation['Indicator'] = 'Projected'
+    df_relation.fillna(0, inplace=True)
+    return df_relation
+
+df_PCJ_relation = relation_projected(df_pCoM_CJ, df_pf_CJ, month_order)
+
+df_PContinental_relation = relation_projected(df_pCoM_Continental, df_pf_Continental, month_order)
+
+df_PG_relation = relation_projected(df_pCoM_G, df_pf_G, month_order)
+
+df_PH_relation = relation_projected(df_pCoM_H, df_pf_H, month_order)
+
+df_PJ_relation = relation_projected(df_pCoM_J, df_pf_J, month_order)
+
+df_PM_relation = relation_projected(df_pCoM_M, df_pf_M, month_order)
+
+df_TPCoM = df_TPCoM.drop(columns=['Indicator'])
+df_TPF = df_TPF.drop(columns=['Indicator'])
+df_PTotal_relation = pd.merge(df_TPCoM, df_TPF, on=['Month'])
+df_PTotal_relation = df_PTotal_relation.set_index('Month').loc[month_order].reset_index()
+df_PTotal_relation.fillna(0, inplace=True)
+df_PTotal_relation['Ratio'] = (df_PTotal_relation.Total_y / df_PTotal_relation.Total_x)*100
+df_PTotal_relation = df_PTotal_relation.drop(columns=['Total_x', 'Total_y'])
+df_PTotal_relation['Indicator'] = 'Projected'
+df_PTotal_relation.fillna(0, inplace=True)
+
+# merge the two relationship Actual and Projected dfs
+
+# CJ relation
+df_CJ_relation = df_PCJ_relation.append(df_ACJ_relation).reset_index()
+df_CJ_relation['Ratio'] = df_CJ_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Continental relation
+df_Continental_relation = df_PContinental_relation.append(df_AContinental_relation).reset_index()
+df_Continental_relation['Ratio'] = df_Continental_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Gentex relation
+df_G_relation = df_PG_relation.append(df_AG_relation).reset_index()
+df_G_relation['Ratio'] = df_G_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Hutchinson relation
+df_H_relation = df_PH_relation.append(df_AH_relation).reset_index()
+df_H_relation['Ratio'] = df_H_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Joyson relation
+df_J_relation = df_PJ_relation.append(df_AJ_relation).reset_index()
+df_J_relation['Ratio'] = df_J_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Modine relation
+df_M_relation = df_PM_relation.append(df_AM_relation).reset_index()
+df_M_relation['Ratio'] = df_M_relation['Ratio'].apply(lambda x: round(x, 1))
+
+# Total relation
+df_Total_relation = df_PTotal_relation.append(df_ATotal_relation).reset_index()
+df_Total_relation['Ratio'] = df_Total_relation['Ratio'].apply(lambda x: round(x, 1))
+    
+    
+# bar graph function
+def total_bar_graph(df_T, df_CJ, df_Continental, df_G, df_H, df_J, df_M, title, location):
+
+    projectedT = df_T.loc[df_T['Indicator'] == 'Projected']
+    actualT = df_T[df_T['Indicator'] == 'Actual']
+    
+    projected_CJ = df_CJ.loc[df_CJ['Indicator'] == 'Projected']
+    actual_CJ = df_CJ[df_CJ['Indicator'] == 'Actual']
+    
+    projected_Continental = df_Continental.loc[df_Continental['Indicator'] == 'Projected']
+    actual_Continental = df_Continental.loc[df_Continental['Indicator'] == 'Actual']
+    
+    projected_G = df_G.loc[df_G['Indicator'] == 'Projected']
+    actual_G = df_G[df_G['Indicator'] == 'Actual']
+    
+    projected_H = df_H.loc[df_H['Indicator'] == 'Projected']
+    actual_H = df_H[df_H['Indicator'] == 'Actual']
+    
+    projected_J = df_J.loc[df_J['Indicator'] == 'Projected']
+    actual_J = df_J[df_J['Indicator'] == 'Actual']
+    
+    projected_M = df_M.loc[df_M['Indicator'] == 'Projected']
+    actual_M = df_M[df_M['Indicator'] == 'Actual']
+    
+    trace_PT = go.Bar(
+    x = projectedT['Month'],
+    y = projectedT['Total'],
+    name = 'Total Projected')
+    
+    trace_AT = go.Bar(
+        x = actualT['Month'],
+        y = actualT['Total'],
+        name = 'Total Actual')
+    
+    trace_PCJ = go.Bar(
+    x = projected_CJ['Month'],
+    y = projected_CJ['Total'],
+    name = 'CJ Projected')
+    
+    trace_ACJ = go.Bar(
+        x = actual_CJ['Month'],
+        y = actual_CJ['Total'],
+        name = 'CJ Actual')
+    
+    trace_PContinental = go.Bar(
+    x = projected_Continental['Month'],
+    y = projected_Continental['Total'],
+    name = 'Continental Projected')
+    
+    trace_AContinental = go.Bar(
+        x = actual_Continental['Month'],
+        y = actual_Continental['Total'],
+        name = 'Continental Actual')
+    
+    trace_PG = go.Bar(
+    x = projected_G['Month'],
+    y = projected_G['Total'],
+    name = 'Gentex Projected')
+    
+    trace_AG = go.Bar(
+        x = actual_G['Month'],
+        y = actual_G['Total'],
+        name = 'Gentex Actual')
+    
+    trace_PH = go.Bar(
+    x = projected_H['Month'],
+    y = projected_H['Total'],
+    name = 'Hutchinson Projected')
+    
+    trace_AH = go.Bar(
+        x = actual_H['Month'],
+        y = actual_H['Total'],
+        name = 'Hutchinson Actual')
+    
+    trace_PJ = go.Bar(
+    x = projected_J['Month'],
+    y = projected_J['Total'],
+    name = 'Joyson Projected')
+    
+    trace_AJ = go.Bar(
+        x = actual_J['Month'],
+        y = actual_J['Total'],
+        name = 'Joyson Actual')
+    
+    trace_PM = go.Bar(
+    x = projected_M['Month'],
+    y = projected_M['Total'],
+    name = 'Modine Projected')
+    
+    trace_AM = go.Bar(
+        x = actual_M['Month'],
+        y = actual_M['Total'],
+        name = 'Modine Actual')
+    
+    data = [trace_PT, trace_AT, trace_PCJ, trace_ACJ, trace_PContinental, trace_AContinental, trace_PG, trace_AG, 
+           trace_PH, trace_AH, trace_PJ, trace_AJ, trace_PM, trace_AM]
+    layout = go.Layout(barmode='group', title = title)
+    fig = go.Figure(layout = layout, data = data)
+    plotly.io.write_html(fig, file = location)
+
+# Projected vs Actual CoM graph
+
+total_bar_graph(df_Ftotal_CoM, df_FCoM_CJ, df_FCoM_Continental, df_FCoM_Gentex, df_FCoM_Hutchinson, df_FCoM_Joyson, 
+                df_FCoM_Modine, 'Projected vs Actual CoM USD', file_path + 'Totals/CoM.html')
+  
+
+# Projected vs Actual Freight graph
+
+#Total
+total_bar_graph(df_total_freight, df_FCJ_freight, df_FContinental_freight, df_FGentex_freight, df_FHutchinson_freight,
+               df_FJoyson_freight, df_FModine_freight, 'Projected vs Actual Freight USD', 
+                file_path + 'Totals/Freight.html')  
+
+# Total Line Graph function
+
+def total_line_graph(total, CJ, Continental, Gentex, Hutchinson, Joyson, Modine, title, location):
+    
+    projectedT = total.loc[total['Indicator'] == 'Projected']
+    actualT = total[total['Indicator'] == 'Actual']
+    
+    projected_CJ = CJ.loc[CJ['Indicator'] == 'Projected']
+    actual_CJ = CJ[CJ['Indicator'] == 'Actual']
+    
+    projected_Continental = Continental.loc[Continental['Indicator'] == 'Projected']
+    actual_Continental = Continental.loc[Continental['Indicator'] == 'Projected']
+    
+    projected_G = Gentex.loc[Gentex['Indicator'] == 'Projected']
+    actual_G = Gentex[Gentex['Indicator'] == 'Actual']
+    
+    projected_H = Hutchinson.loc[Hutchinson['Indicator'] == 'Projected']
+    actual_H = Hutchinson[Hutchinson['Indicator'] == 'Actual']
+    
+    projected_J = Joyson.loc[Joyson['Indicator'] == 'Projected']
+    actual_J = Joyson[Joyson['Indicator'] == 'Actual']
+    
+    projected_M = Modine.loc[Modine['Indicator'] == 'Projected']
+    actual_M = Modine[Modine['Indicator'] == 'Actual']
+    
+    trace_PT = go.Line(
+    x = projectedT['Month'],
+    y = projectedT['Ratio'],
+    name = 'Total Projected')
+    
+    trace_AT = go.Line(
+        x = actualT['Month'],
+        y = actualT['Ratio'],
+        name = 'Total Actual')
+    
+    trace_PCJ = go.Line(
+    x = projected_CJ['Month'],
+    y = projected_CJ['Ratio'],
+    name = 'CJ Projected')
+    
+    trace_ACJ = go.Line(
+        x = actual_CJ['Month'],
+        y = actual_CJ['Ratio'],
+        name = 'CJ Actual')
+    
+    trace_PContinental = go.Line(
+    x = projected_Continental['Month'],
+    y = projected_Continental['Ratio'],
+    name = 'Continental Projected')
+    
+    trace_AContinental = go.Line(
+        x = actual_Continental['Month'],
+        y = actual_Continental['Ratio'],
+        name = 'Continental Actual')
+    
+    trace_PG = go.Line(
+    x = projected_G['Month'],
+    y = projected_G['Ratio'],
+    name = 'Gentex Projected')
+    
+    trace_AG = go.Line(
+        x = actual_G['Month'],
+        y = actual_G['Ratio'],
+        name = 'Gentex Actual')
+    
+    trace_PH = go.Line(
+    x = projected_H['Month'],
+    y = projected_H['Ratio'],
+    name = 'Hutchinson Projected')
+    
+    trace_AH = go.Line(
+        x = actual_H['Month'],
+        y = actual_H['Ratio'],
+        name = 'Hutchinson Actual')
+    
+    trace_PJ = go.Line(
+    x = projected_J['Month'],
+    y = projected_J['Ratio'],
+    name = 'Joyson Projected')
+    
+    trace_AJ = go.Line(
+        x = actual_J['Month'],
+        y = actual_J['Ratio'],
+        name = 'Joyson Actual')
+    
+    trace_PM = go.Line(
+    x = projected_M['Month'],
+    y = projected_M['Ratio'],
+    name = 'Modine Projected')
+    
+    trace_AM = go.Line(
+        x = actual_M['Month'],
+        y = actual_M['Ratio'],
+        name = 'Modine Actual')
+    
+    data = [trace_PT, trace_AT, trace_PCJ, trace_ACJ, trace_PContinental, trace_AContinental, trace_PG, trace_AG, 
+           trace_PH, trace_AH, trace_PJ, trace_AJ, trace_PM, trace_AM]
+    
+    layout = go.Layout(title = title)
+    fig = go.Figure(layout = layout, data = data)
+    plotly.io.write_html(fig, file = location)
+    
+
+
+# Graph showing relationship
+
+total_line_graph(df_Total_relation, df_CJ_relation,df_Continental_relation, df_G_relation, df_H_relation,
+                 df_J_relation, df_M_relation, 'Total Freight & CoM relation %',
+                 file_path + 'Totals/Ratio.html')
+
+# exporting df function
+
+def export_dfs(df_TF, df_TCoM, df_Trelation,df_CJF, df_CJCoM, df_CJrelation, df_ContinentalF, df_ContinentalCoM, 
+               df_Continentalrelation, df_GF, df_GCoM, df_Grelation, df_HF, df_HCoM, df_Hrelation, df_JF, df_JCoM,
+               df_Jrelation, df_MF, df_MCoM, df_Mrelation, location):
+    writer = pd.ExcelWriter(location)
+    df_TF.to_excel(writer, 'Total Freight')
+    df_TCoM.to_excel(writer, 'Total CoM')
+    df_Trelation.to_excel(writer, 'Total Relation')
+    df_CJF.to_excel(writer, 'CJ Freight')
+    df_CJCoM.to_excel(writer, 'CJ CoM')
+    df_CJrelation.to_excel(writer, 'CJ Relation')
+    df_ContinentalF.to_excel(writer, 'Continental Freight')
+    df_ContinentalCoM.to_excel(writer, 'Continental CoM')
+    df_Continentalrelation.to_excel(writer, 'Continental Relation')
+    df_GF.to_excel(writer, 'Gentex Freight')
+    df_GCoM.to_excel(writer, 'Gentex CoM')
+    df_Grelation.to_excel(writer, 'Gentex Relation')
+    df_HF.to_excel(writer, 'Hutchinson Freight')
+    df_HCoM.to_excel(writer, 'Hutchinson CoM')
+    df_Hrelation.to_excel(writer, 'Hutchinson Relation')
+    df_JF.to_excel(writer, 'Joyson Freight')
+    df_JCoM.to_excel(writer, 'Joyson CoM')
+    df_Jrelation.to_excel(writer, 'Joyson Relation')
+    df_MF.to_excel(writer, 'Modine Freight')
+    df_MCoM.to_excel(writer, 'Modine CoM')
+    df_Mrelation.to_excel(writer, 'Modine Relation')
+    writer.save()
+
+# exporting dfs to excel sheets
+
+# Totals
+export_dfs(df_total_freight, df_Ftotal_CoM, df_Total_relation, df_RF_CJ, df_RCoM_CJ, df_CJ_relation, df_RF_Continental,
+           df_RCoM_Continental, df_Continental_relation, df_RF_G, df_RCoM_G, df_G_relation, df_RF_H, df_RCoM_H, df_H_relation,
+           df_RF_J, df_RCoM_J, df_J_relation, df_RF_M, df_RCoM_M, df_M_relation, 
+           file_path + 'Totals/data_frames.xlsx')
